@@ -17,7 +17,9 @@ limitations under the License.
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:keepScreenOn="true" >
+    android:keepScreenOn="true" 
+    android:paddingTop="25dp"
+    android:onClick="showActionBar">
     <com.scottmain.android.searchlight.PreviewSurface 
     	android:id="@+id/surface"
     	android:layout_width="1dp"

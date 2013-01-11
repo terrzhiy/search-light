@@ -21,7 +21,8 @@ limitations under the License.
     <com.scottmain.android.searchlight.PreviewSurface 
     	android:id="@+id/surface"
     	android:layout_width="match_parent"
-    	android:layout_height="match_parent" />
+    	android:layout_height="match_parent"
+    	android:onClick="startFocus" />
 	<ImageButton 
 		android:id="@+id/button"
 		android:layout_alignParentLeft="true"

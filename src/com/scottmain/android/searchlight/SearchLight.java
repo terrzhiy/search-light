@@ -16,6 +16,9 @@ limitations under the License.
 
 package com.scottmain.android.searchlight;
 
+import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -24,11 +27,14 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.drawable.TransitionDrawable;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -45,13 +51,25 @@ public class SearchLight extends Activity implements PreviewSurface.Callback {
 	boolean on = false;
 	boolean paused = false;
 	boolean skipAnimate = false;
+	boolean mSystemUiVisible = true;
+	boolean mIsHC = false;
+	boolean mIsJB = false;
 	int mCurrentMode = R.id.mode_normal;
 	
     /** Called when the activity is first created. */
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)  // Suppress lint for ActionBar Apis
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         int mode; // viewing mode
+        
+        // Set up version bools
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+        	mIsHC = true;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            	mIsJB = true;
+            }
+        }
         
         // When user selects mode from menu, there's a mode type
         mode = getIntent().getIntExtra(MODE_TYPE, 0);
@@ -65,24 +83,32 @@ public class SearchLight extends Activity implements PreviewSurface.Callback {
 	        intent.putExtra(MODE_TYPE, mode);
             setIntent(intent);
         }
+        
         switch(mode) {
         case R.id.mode_black:
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
-            		WindowManager.LayoutParams.FLAG_FULLSCREEN); 
         	setContentView(R.layout.black);
         	mCurrentMode = R.id.mode_black;
+
+            setSystemUiVisible(false);
         	break;
         case R.id.mode_viewfinder:
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
-            		WindowManager.LayoutParams.FLAG_FULLSCREEN); 
         	setContentView(R.layout.viewfinder);
         	mCurrentMode = R.id.mode_viewfinder;
+
+        	setSystemUiVisible(false);
         	break;
         case R.id.mode_normal:
         default:
             setContentView(R.layout.main);
             mCurrentMode = R.id.mode_normal;
         	break;
+        }
+        
+        // Remove icon and title from action bar
+        if (mIsHC) {
+        	ActionBar actionBar = getActionBar();
+        	actionBar.setDisplayShowTitleEnabled(false);
+        	actionBar.setDisplayShowHomeEnabled(false);
         }
         
         mSurface = (PreviewSurface) findViewById(R.id.surface);
@@ -260,5 +286,114 @@ public class SearchLight extends Activity implements PreviewSurface.Callback {
 	public void cameraNotAvailable() {
 		showDialog(R.id.dialog_camera_na);
 	}
+	
+	
+
+	
+    /** Toggle whether the system UI (status bar / system bar) is visible.
+     *  This also toggles the action bar visibility.
+     * @param show True to show the system UI, false to hide it.
+     */
+	// Suppress lint because we don't use ActionBar unless mIsHC is true
+	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
+    void setSystemUiVisible(boolean show) {
+        mSystemUiVisible = show;
+        Window window = getWindow();
+
+        if (mIsHC) {
+        // ******* POST HONEYCOMB HIDE UI *********
+	        WindowManager.LayoutParams winParams = window.getAttributes();
+	        View view = findViewById(android.R.id.content);
+	        ActionBar actionBar = getActionBar();
+	
+	        if (show) {
+	            // Show status bar (remove fullscreen flag)
+	            window.setFlags(0, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+	            // Show system bar
+	            view.setSystemUiVisibility(View.STATUS_BAR_VISIBLE);
+	            // Show action bar
+	            actionBar.show();
+	        }
+	        
+	        if (!mIsJB) {
+	    	    new TimeoutActionBarTask().execute(1);
+	        }
+	        window.setAttributes(winParams);
+        } else {
+        // ***** PRE HONEYCOMB HIDE UI ******
+        	if (show) {
+	            // Show status bar (remove fullscreen flag)
+	            window.setFlags(0, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        	} else {
+        		// Hide the status bar
+	            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
+	            		WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        	}
+        }
+    }
+    
+
+    
+    
+    boolean mIgnoreTouch = false;
+
+    /* Bullshit timout to make UI hiding fluid for versions before JB */
+    private class TimeoutSystemUITask extends AsyncTask<Integer,Integer,Integer> {
+        /** The system calls this to perform work in a worker thread and
+          * delivers it the parameters given to AsyncTask.execute() */
+        protected Integer doInBackground(Integer...ints) {
+        	mIgnoreTouch = true;
+        	try {
+        		// Pause 3 seconds before hiding UI
+				Thread.sleep(200);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				return -1;
+			}
+            return 1;
+        }
+        
+        /** The system calls this to perform work in the UI thread and delivers
+          * the result from doInBackground() */
+        // suppress lint for the setSystemUiVisibility because this isn't used pre-JB (let-alone pre-HC)
+        @SuppressLint
+        ("NewApi") protected void onPostExecute(Integer result) {
+            Window window = getWindow();
+            View view = findViewById(android.R.id.content);
+            // Add fullscreen flag (hide status bar)
+            window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+            // Hide system bar
+            view.setSystemUiVisibility(View.STATUS_BAR_HIDDEN);
+            // Hide the action bar in callback below
+        	mIgnoreTouch = false;
+        }
+    }
+    
+    private class TimeoutActionBarTask extends AsyncTask<Integer,Integer,Integer> {
+        /** The system calls this to perform work in a worker thread and
+          * delivers it the parameters given to AsyncTask.execute() */
+        protected Integer doInBackground(Integer...ints) {
+        	mIgnoreTouch = true;
+        	try {
+        		// Pause 3 seconds before hiding UI
+				Thread.sleep(2500);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				return -1;
+			}
+            return 1;
+        }
+        
+        /** The system calls this to perform work in the UI thread and delivers
+          * the result from doInBackground() */
+        // Suppress lint because the TimoutActionBarTask isn't instantiated pre-HC
+        @TargetApi(Build.VERSION_CODES.HONEYCOMB)
+        protected void onPostExecute(Integer result) {
+        	getActionBar().hide();
+        	new TimeoutSystemUITask().execute(1);
+        	mIgnoreTouch = false;
+        }
+    }
 	
 }

@@ -16,11 +16,14 @@ limitations under the License.
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/normal"
           android:icon="@drawable/ic_menu_normal"
-          android:title="@string/normal" />
+          android:title="@string/normal"
+          android:showAsAction="ifRoom" />
     <item android:id="@+id/black"
           android:icon="@drawable/ic_menu_black"
-          android:title="@string/black" />
+          android:title="@string/black"
+          android:showAsAction="ifRoom" />
     <item android:id="@+id/viewfinder"
           android:icon="@drawable/ic_menu_viewfinder"
-          android:title="@string/viewfinder" />
+          android:title="@string/viewfinder"
+          android:showAsAction="ifRoom" />
 </menu>

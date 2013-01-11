@@ -1,0 +1,15 @@
+<resources>
+    <style name="CompatibilityTheme" parent="@android:style/Theme.Holo">
+        <item name="android:actionBarStyle">@style/BlackActionBar</item>
+        <item name="android:windowActionBarOverlay">true</item>
+        <!-- Inherits the Holo theme -->
+    </style>
+    <style name="BlackActionBar" parent="@android:style/Widget.Holo.ActionBar.Solid">
+        <item name="android:background">#0000</item>
+    </style>
+    
+    <style name="CompatibilityThemeBlack" parent="@style/CompatibilityTheme">
+        <item name="android:windowFullscreen">true</item>
+        <!-- Inherits the Holo theme -->
+    </style>
+</resources>

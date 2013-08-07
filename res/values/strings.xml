@@ -22,4 +22,18 @@ limitations under the License.
     <string name="viewfinder">Viewfinder</string>
     <string name="normal">Standard</string>
     <string name="touch_here">touch here</string>
+    
+    <string name="switch_on">ON</string>
+    <string name="switch_off">OFF</string>
+    
+    <string name="description_button_lightbulb">Touch to toggle light</string>
+    <string name="description_button_settings">Change light mode</string>
+    
+    <!--  MUST match the exact order as "modes_ids" integer array -->
+    <string-array name="modes">
+        <item>Light bulb</item>
+        <item>Light switch</item>
+        <item>Viewfinder</item>
+        <item>Blackout</item>
+    </string-array>
 </resources>

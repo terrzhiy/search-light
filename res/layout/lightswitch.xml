@@ -15,11 +15,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:myapp="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:keepScreenOn="true" 
-    android:background="#000"
-    android:fitsSystemWindows="true">
+    android:keepScreenOn="true" >
     <com.scottmain.android.searchlight.PreviewSurface 
     	android:id="@+id/surface"
     	android:layout_width="1dp"
@@ -29,20 +28,17 @@ limitations under the License.
     	android:layout_width="1dp"
     	android:layout_height="1dp"
     	android:background="#000" />
-	<Button
-		android:id="@+id/toggleButton"
+	<com.scottmain.android.searchlight.LightSwitch
+		android:id="@+id/switchbutton"
 		android:layout_centerVertical="true"
 		android:layout_centerHorizontal="true"
-	    android:layout_width="150dp"
-	    android:layout_height="150dp"
-	    android:background="@drawable/rectangle"
-	    android:text="@string/touch_here"
-	    android:textColor="#FFF"
-	    android:textSize="20sp"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
 	    android:focusableInTouchMode="true"
-	    android:onClick="toggleLight">
-	    <requestFocus/> <!-- get focus so the trackball works -->
-	</Button>
+	    android:focusable="true"
+	    android:clickable="true"
+	    android:contentDescription="@string/description_button_lightbulb">
+	</com.scottmain.android.searchlight.LightSwitch>
 	<!-- This image button remains because it's expected by the code (but just not used in this layout) -->
 	<ImageButton 
 		android:id="@+id/button"
@@ -56,7 +52,7 @@ limitations under the License.
 	    android:layout_alignParentTop="true"
 	    android:layout_alignParentRight="true"
 	    android:padding="16dp"
-	    android:src="@drawable/ic_action_settings_blackout"
+	    android:src="@drawable/ic_action_settings"
 	    android:background="@drawable/button_background"
 	    android:onClick="showModeDialog"
 	    android:contentDescription="@string/description_button_settings" />

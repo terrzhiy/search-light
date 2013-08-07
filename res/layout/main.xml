@@ -33,10 +33,22 @@ limitations under the License.
 		android:layout_centerHorizontal="true"
 	    android:layout_width="wrap_content"
 	    android:layout_height="wrap_content"
-	    android:background="#0000"
+	    android:background="@color/transparent"
 	    android:src="@drawable/lightbulb"
 	    android:focusableInTouchMode="true"
-	    android:onClick="toggleLight">
+	    android:onClick="toggleLight"
+	    android:contentDescription="@string/description_button_lightbulb">
 	    <requestFocus/> <!-- get focus so the trackball works -->
 	</ImageButton>
+	<ImageButton 
+		android:id="@+id/button_settings"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:layout_alignParentTop="true"
+	    android:layout_alignParentRight="true"
+	    android:padding="16dp"
+	    android:src="@drawable/ic_action_settings"
+	    android:background="@drawable/button_background"
+	    android:onClick="showModeDialog"
+	    android:contentDescription="@string/description_button_settings" />
 </RelativeLayout>

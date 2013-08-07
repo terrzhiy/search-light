@@ -21,8 +21,7 @@ limitations under the License.
     <com.scottmain.android.searchlight.PreviewSurface 
     	android:id="@+id/surface"
     	android:layout_width="match_parent"
-    	android:layout_height="match_parent"
-    	android:onClick="startFocus" />
+    	android:layout_height="match_parent" />
 	<ImageButton 
 		android:id="@+id/button"
 		android:layout_alignParentLeft="true"
@@ -35,4 +34,15 @@ limitations under the License.
 	    android:onClick="toggleLight">
 	    <requestFocus/> <!-- get focus so the trackball works -->
 	</ImageButton>
+	<ImageButton 
+		android:id="@+id/button_settings"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:layout_alignParentTop="true"
+	    android:layout_alignParentRight="true"
+	    android:padding="16dp"
+	    android:src="@drawable/ic_action_settings"
+	    android:background="@drawable/button_background"
+	    android:onClick="showModeDialog"
+	    android:contentDescription="@string/description_button_settings" />
 </RelativeLayout>

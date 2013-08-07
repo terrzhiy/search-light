@@ -16,10 +16,6 @@ limitations under the License.
 
 package com.scottmain.android.searchlight;
 
-import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
-import android.app.ActionBar;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
@@ -27,24 +23,23 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.drawable.TransitionDrawable;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.DialogFragment;
+import android.support.v4.app.FragmentActivity;
 import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.ImageButton;
 
-public class SearchLight extends Activity implements PreviewSurface.Callback {
+public class SearchLight extends FragmentActivity implements PreviewSurface.Callback, ModeDialogFragment.ModeDialogListener {
 	//private final static String TAG = "SearchLight";
 	private final static String MODE_TYPE = "mode_type";
 	ImageButton bulb;
+	LightSwitch mLightswitch;
 	
 	TransitionDrawable mDrawable;
 	PreviewSurface mSurface;
@@ -52,24 +47,13 @@ public class SearchLight extends Activity implements PreviewSurface.Callback {
 	boolean paused = false;
 	boolean skipAnimate = false;
 	boolean mSystemUiVisible = true;
-	boolean mIsHC = false;
-	boolean mIsJB = false;
-	int mCurrentMode = R.id.mode_normal;
+	int mCurrentMode = R.id.mode_lightbulb;
 	
     /** Called when the activity is first created. */
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB)  // Suppress lint for ActionBar Apis
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         int mode; // viewing mode
-        
-        // Set up version bools
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-        	mIsHC = true;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            	mIsJB = true;
-            }
-        }
         
         // When user selects mode from menu, there's a mode type
         mode = getIntent().getIntExtra(MODE_TYPE, 0);
@@ -85,30 +69,38 @@ public class SearchLight extends Activity implements PreviewSurface.Callback {
         }
         
         switch(mode) {
-        case R.id.mode_black:
+        case R.id.mode_blackout:
         	setContentView(R.layout.black);
-        	mCurrentMode = R.id.mode_black;
-
-            setSystemUiVisible(false);
+        	mCurrentMode = R.id.mode_blackout;
         	break;
         case R.id.mode_viewfinder:
         	setContentView(R.layout.viewfinder);
         	mCurrentMode = R.id.mode_viewfinder;
-
-        	setSystemUiVisible(false);
         	break;
-        case R.id.mode_normal:
+        case R.id.mode_lightswitch:
+        	setContentView(R.layout.lightswitch);
+        	mCurrentMode = R.id.mode_lightswitch;
+        	mLightswitch = (LightSwitch) findViewById(R.id.switchbutton);
+        	mLightswitch.setChecked(true);
+        	mLightswitch.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+				@Override
+				public void onCheckedChanged(CompoundButton button, boolean isChecked) {
+					if (isChecked){
+						turnOn();
+					} else {
+						turnOff();
+					}
+				}
+        		
+        	});
+        	
+        	
+        	break;
+        case R.id.mode_lightbulb:
         default:
             setContentView(R.layout.main);
-            mCurrentMode = R.id.mode_normal;
+            mCurrentMode = R.id.mode_lightbulb;
         	break;
-        }
-        
-        // Remove icon and title from action bar
-        if (mIsHC) {
-        	ActionBar actionBar = getActionBar();
-        	actionBar.setDisplayShowTitleEnabled(false);
-        	actionBar.setDisplayShowHomeEnabled(false);
         }
         
         mSurface = (PreviewSurface) findViewById(R.id.surface);
@@ -133,16 +125,34 @@ public class SearchLight extends Activity implements PreviewSurface.Callback {
     private void turnOn() {
     	if (!on) {
     	    on = true;
-    	    mDrawable.startTransition(200);
     	    mSurface.lightOn();
+    	    // Update UI
+    	    switch (mCurrentMode) {
+    	    case R.id.mode_lightbulb:
+    	    case R.id.mode_viewfinder:
+        	    mDrawable.startTransition(200);
+        	    break;
+    	    case R.id.mode_lightswitch:
+            	mLightswitch.setChecked(true);
+        	    break;
+    	    }
     	}
     }
     
     private void turnOff() {
     	if (on) {
 	        on = false;
-	        mDrawable.reverseTransition(300);
     	    mSurface.lightOff();
+    	    // Update UI
+    	    switch (mCurrentMode) {
+    	    case R.id.mode_lightbulb:
+    	    case R.id.mode_viewfinder:
+    	        mDrawable.reverseTransition(300);
+        	    break;
+    	    case R.id.mode_lightswitch:
+            	mLightswitch.setChecked(false);
+        	    break;
+    	    }
     	}
     }
 
@@ -165,7 +175,9 @@ public class SearchLight extends Activity implements PreviewSurface.Callback {
 	@Override
 	protected void onStop() {
 		super.onStop();
-		paused = false;
+		// kill any ongoing transition so it's not still finishing when we resume
+		mDrawable.resetTransition();
+		findViewById(R.id.surface).invalidate();
 
 		// Save the current mode so it's not lost when process stops
 		SharedPreferences modePreferences = getPreferences(Context.MODE_PRIVATE);
@@ -178,8 +190,8 @@ public class SearchLight extends Activity implements PreviewSurface.Callback {
 	public void onWindowFocusChanged(boolean hasFocus) {
 		super.onWindowFocusChanged(hasFocus);
 
-        int mode = getIntent().getIntExtra(MODE_TYPE, R.id.mode_normal);
-        if (hasFocus && !skipAnimate && mode == R.id.mode_black) {
+        int mode = getIntent().getIntExtra(MODE_TYPE, R.id.mode_lightbulb);
+        if (hasFocus && !skipAnimate && mode == R.id.mode_blackout) {
         	Button image = (Button) findViewById(R.id.toggleButton);
         	Animation fadeOut = AnimationUtils.loadAnimation(this, R.anim.fade_out);
         	image.startAnimation(fadeOut);
@@ -210,73 +222,34 @@ public class SearchLight extends Activity implements PreviewSurface.Callback {
 		}
 	}
 
+	/** In case a device has a MENU button, show the mode dialog when it's pressed */
 	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-	    MenuInflater inflater = getMenuInflater();
-	    inflater.inflate(R.menu.options_menu, menu);
+	public boolean onPrepareOptionsMenu(Menu menu) {
+	    showModeDialog(findViewById(R.id.button_settings));
 	    return true;
 	}
 	
-	
 
+	/** Implement the ModeDialogFragment's callback interface method */
 	@Override
-	public void onOptionsMenuClosed(Menu menu) {
-		// TODO Auto-generated method stub
-		super.onOptionsMenuClosed(menu);
+	public void onModeClick(int which) {
+		if (mCurrentMode == which) return;
+
 		skipAnimate = true;
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		Intent intent;
-	    switch (item.getItemId()) {
-	    case R.id.black:
-	        intent = new Intent(this, SearchLight.class);
-	        intent.putExtra(MODE_TYPE, R.id.mode_black);
+	    if (which != -1) {
+	        Intent intent = new Intent(this, SearchLight.class);
+	        intent.putExtra(MODE_TYPE, which);
 	        mSurface.releaseCamera();
 	        startActivity(intent);
 	        finish();
-	        return true;
-	    case R.id.viewfinder:
-	        intent = new Intent(this, SearchLight.class);
-	        intent.putExtra(MODE_TYPE, R.id.mode_viewfinder);
-	        mSurface.releaseCamera();
-	        startActivity(intent);
-	        finish();
-	        return true;
-	    case R.id.normal:
-	        intent = new Intent(this, SearchLight.class);
-	        intent.putExtra(MODE_TYPE, R.id.mode_normal);
-	        mSurface.releaseCamera();
-	        startActivity(intent);
-	        finish();
-	        return true;
-	    default:
-	        return super.onOptionsItemSelected(item);
 	    }
 	}
 	
-	@Override
-	public boolean onPrepareOptionsMenu(Menu menu) {
-        switch(getIntent().getIntExtra(MODE_TYPE, R.id.mode_normal)) {
-        case R.id.mode_black:
-			menu.findItem(R.id.black).setVisible(false);
-			menu.findItem(R.id.normal).setVisible(true);
-			menu.findItem(R.id.viewfinder).setVisible(true);
-        	break;
-        case R.id.mode_viewfinder:
-			menu.findItem(R.id.black).setVisible(true);
-			menu.findItem(R.id.normal).setVisible(true);
-			menu.findItem(R.id.viewfinder).setVisible(false);
-        	break;
-        case R.id.mode_normal:
-        default:
-			menu.findItem(R.id.black).setVisible(true);
-			menu.findItem(R.id.normal).setVisible(false);
-			menu.findItem(R.id.viewfinder).setVisible(true);
-        	break;
-        }
-		return super.onPrepareOptionsMenu(menu);
+	/** Call this to show the dialog with different light modes */
+	public void showModeDialog(View v) {
+		int currentMode = getIntent().getIntExtra(MODE_TYPE, R.id.mode_lightbulb);
+	    DialogFragment newFragment = ModeDialogFragment.newInstance(currentMode);
+	    newFragment.show(getSupportFragmentManager(), "mode_dialog");
 	}
 
 	public void cameraReady() {
@@ -286,114 +259,5 @@ public class SearchLight extends Activity implements PreviewSurface.Callback {
 	public void cameraNotAvailable() {
 		showDialog(R.id.dialog_camera_na);
 	}
-	
-	
-
-	
-    /** Toggle whether the system UI (status bar / system bar) is visible.
-     *  This also toggles the action bar visibility.
-     * @param show True to show the system UI, false to hide it.
-     */
-	// Suppress lint because we don't use ActionBar unless mIsHC is true
-	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
-    void setSystemUiVisible(boolean show) {
-        mSystemUiVisible = show;
-        Window window = getWindow();
-
-        if (mIsHC) {
-        // ******* POST HONEYCOMB HIDE UI *********
-	        WindowManager.LayoutParams winParams = window.getAttributes();
-	        View view = findViewById(android.R.id.content);
-	        ActionBar actionBar = getActionBar();
-	
-	        if (show) {
-	            // Show status bar (remove fullscreen flag)
-	            window.setFlags(0, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-	            // Show system bar
-	            view.setSystemUiVisibility(View.STATUS_BAR_VISIBLE);
-	            // Show action bar
-	            actionBar.show();
-	        }
-	        
-	        if (!mIsJB) {
-	    	    new TimeoutActionBarTask().execute(1);
-	        }
-	        window.setAttributes(winParams);
-        } else {
-        // ***** PRE HONEYCOMB HIDE UI ******
-        	if (show) {
-	            // Show status bar (remove fullscreen flag)
-	            window.setFlags(0, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        	} else {
-        		// Hide the status bar
-	            getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 
-	            		WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        	}
-        }
-    }
-    
-
-    
-    
-    boolean mIgnoreTouch = false;
-
-    /* Bullshit timout to make UI hiding fluid for versions before JB */
-    private class TimeoutSystemUITask extends AsyncTask<Integer,Integer,Integer> {
-        /** The system calls this to perform work in a worker thread and
-          * delivers it the parameters given to AsyncTask.execute() */
-        protected Integer doInBackground(Integer...ints) {
-        	mIgnoreTouch = true;
-        	try {
-        		// Pause 3 seconds before hiding UI
-				Thread.sleep(200);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-				return -1;
-			}
-            return 1;
-        }
-        
-        /** The system calls this to perform work in the UI thread and delivers
-          * the result from doInBackground() */
-        // suppress lint for the setSystemUiVisibility because this isn't used pre-JB (let-alone pre-HC)
-        @SuppressLint
-        ("NewApi") protected void onPostExecute(Integer result) {
-            Window window = getWindow();
-            View view = findViewById(android.R.id.content);
-            // Add fullscreen flag (hide status bar)
-            window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN);
-            // Hide system bar
-            view.setSystemUiVisibility(View.STATUS_BAR_HIDDEN);
-            // Hide the action bar in callback below
-        	mIgnoreTouch = false;
-        }
-    }
-    
-    private class TimeoutActionBarTask extends AsyncTask<Integer,Integer,Integer> {
-        /** The system calls this to perform work in a worker thread and
-          * delivers it the parameters given to AsyncTask.execute() */
-        protected Integer doInBackground(Integer...ints) {
-        	mIgnoreTouch = true;
-        	try {
-        		// Pause 3 seconds before hiding UI
-				Thread.sleep(2500);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-				return -1;
-			}
-            return 1;
-        }
-        
-        /** The system calls this to perform work in the UI thread and delivers
-          * the result from doInBackground() */
-        // Suppress lint because the TimoutActionBarTask isn't instantiated pre-HC
-        @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-        protected void onPostExecute(Integer result) {
-        	getActionBar().hide();
-        	new TimeoutSystemUITask().execute(1);
-        	mIgnoreTouch = false;
-        }
-    }
 	
 }

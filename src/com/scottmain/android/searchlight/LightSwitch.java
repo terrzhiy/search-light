@@ -385,29 +385,17 @@ public class LightSwitch extends CompoundButton {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        // Draw the switch
-        int switchLeft = mSwitchLeft;
-        int switchTop = mSwitchTop;
-        int switchRight = mSwitchRight;
-        int switchBottom = mSwitchBottom;
-
-        mTrackDrawable.setBounds(switchLeft, switchTop, switchRight, switchBottom);
+        mTrackDrawable.setBounds(mSwitchLeft, mSwitchTop, mSwitchRight, mSwitchBottom);
         mTrackDrawable.draw(canvas);
 
         canvas.save();
 
-        int switchInnerLeft = switchLeft;
-        int switchInnerTop = switchTop;
-        int switchInnerRight = switchRight;
-        int switchInnerBottom = switchBottom;
-        canvas.clipRect(switchInnerLeft, switchTop, switchInnerRight, switchBottom);
+        canvas.clipRect(mSwitchLeft, mSwitchTop, mSwitchRight, mSwitchBottom);
 
-        final int thumbPos = (int) (mThumbPosition + 0.5f);
-        int thumbTop = switchInnerTop + thumbPos;
-        int thumbBottom = thumbTop + mThumbHeight;
+        int thumbTop = mSwitchTop + (int) (mThumbPosition + 0.5f);
 
-        mThumbDrawable.setBounds(switchLeft + mSwitchPadding, thumbTop + mSwitchPadding,
-        		switchRight - mSwitchPadding, thumbBottom - mSwitchPadding);
+        mThumbDrawable.setBounds(mSwitchLeft + mSwitchPadding, thumbTop + mSwitchPadding,
+        		mSwitchRight - mSwitchPadding, (thumbTop + mThumbHeight) - mSwitchPadding);
         mThumbDrawable.draw(canvas);
 
         // mTextColors should not be null, but just in case
@@ -420,8 +408,8 @@ public class LightSwitch extends CompoundButton {
         // Draw the button text
         Layout switchText = isThumbPositionCheckedState() ? mOnLayout : mOffLayout;
         if (switchText != null) {
-            canvas.translate((switchLeft + switchRight) / 2 - switchText.getWidth() / 2,
-                    (thumbTop + thumbBottom) / 2 - switchText.getHeight() / 2);
+            canvas.translate((mSwitchLeft + mSwitchRight) / 2 - switchText.getWidth() / 2,
+                    (thumbTop + (thumbTop + mThumbHeight)) / 2 - switchText.getHeight() / 2);
             switchText.draw(canvas);
         }
 

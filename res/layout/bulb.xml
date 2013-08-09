@@ -14,15 +14,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<com.scottmain.android.searchlight.LightSwitch
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:myapp="http://schemas.android.com/apk/res-auto"
-	android:id="@+id/button_lightswitch"
+<ImageButton xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/button_bulb"
 	android:layout_gravity="center"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:background="@color/transparent"
+    android:src="@drawable/lightbulb"
     android:focusableInTouchMode="true"
-    android:focusable="true"
-    android:clickable="true"
-    android:contentDescription="@string/description_button_lightbulb" />
-
+    android:onClick="toggleLight"
+    android:contentDescription="@string/description_button_lightbulb">
+    <requestFocus/> <!-- get focus so the trackball works -->
+</ImageButton>

@@ -22,37 +22,46 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.drawable.TransitionDrawable;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
-import android.widget.CompoundButton;
-import android.widget.CompoundButton.OnCheckedChangeListener;
-import android.widget.ImageButton;
+import android.widget.RelativeLayout.LayoutParams;
 
-public class SearchLight extends FragmentActivity implements PreviewSurface.Callback, ModeDialogFragment.ModeDialogListener {
+public class SearchLight extends FragmentActivity implements PreviewSurface.Callback, 
+		ModeDialogFragment.ModeDialogListener, LightControlFragment.LightControlListener  {
 	//private final static String TAG = "SearchLight";
 	private final static String MODE_TYPE = "mode_type";
-	ImageButton bulb;
-	LightSwitch mLightswitch;
 	
-	TransitionDrawable mDrawable;
 	PreviewSurface mSurface;
 	boolean on = false;
 	boolean paused = false;
 	boolean skipAnimate = false;
 	boolean mSystemUiVisible = true;
-	int mCurrentMode = R.id.mode_lightbulb;
+	boolean mCameraReady = false; // to make sure we don't turn on light when preview surface resizes
+	int mCurrentMode;
+	
+	
+	FragmentManager mFragmentManager;
+	LightControlFragment mCurrentFragment;
 	
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        setContentView(R.layout.main);
+        mSurface = (PreviewSurface) findViewById(R.id.surface);
+        mSurface.setCallback(this);
+        
         int mode; // viewing mode
         
         // When user selects mode from menu, there's a mode type
@@ -70,50 +79,35 @@ public class SearchLight extends FragmentActivity implements PreviewSurface.Call
         
         switch(mode) {
         case R.id.mode_blackout:
-        	setContentView(R.layout.black);
         	mCurrentMode = R.id.mode_blackout;
         	break;
         case R.id.mode_viewfinder:
-        	setContentView(R.layout.viewfinder);
         	mCurrentMode = R.id.mode_viewfinder;
         	break;
         case R.id.mode_lightswitch:
-        	setContentView(R.layout.lightswitch);
         	mCurrentMode = R.id.mode_lightswitch;
-        	mLightswitch = (LightSwitch) findViewById(R.id.switchbutton);
-        	mLightswitch.setChecked(true);
-        	mLightswitch.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-				@Override
-				public void onCheckedChanged(CompoundButton button, boolean isChecked) {
-					if (isChecked){
-						turnOn();
-					} else {
-						turnOff();
-					}
-				}
-        		
-        	});
-        	
-        	
         	break;
         case R.id.mode_lightbulb:
         default:
-            setContentView(R.layout.main);
             mCurrentMode = R.id.mode_lightbulb;
         	break;
         }
         
-        mSurface = (PreviewSurface) findViewById(R.id.surface);
-        mSurface.setCallback(this);
-        if (mode == R.id.mode_viewfinder) {
-        	mSurface.setIsViewfinder();
-        }
-        
-        bulb = (ImageButton) findViewById(R.id.button);
-        mDrawable = (TransitionDrawable) bulb.getDrawable();
-        mDrawable.setCrossFadeEnabled(true);
+        // Set up layout with initial controller fragment
+        mFragmentManager = getSupportFragmentManager();
+        switchControlFragment(mCurrentMode);
     }
     
+
+
+    /** Implementation of LightControlFragment callback. Primarily for LightSwitch mode */
+	@Override
+	public void onLightControlClick(boolean on) {
+		if (on) turnOn();
+		else turnOff();
+	}
+
+    /** Click event for all light controllers */
     public void toggleLight(View v) {
     	if (on) {
     		turnOff();
@@ -126,16 +120,7 @@ public class SearchLight extends FragmentActivity implements PreviewSurface.Call
     	if (!on) {
     	    on = true;
     	    mSurface.lightOn();
-    	    // Update UI
-    	    switch (mCurrentMode) {
-    	    case R.id.mode_lightbulb:
-    	    case R.id.mode_viewfinder:
-        	    mDrawable.startTransition(200);
-        	    break;
-    	    case R.id.mode_lightswitch:
-            	mLightswitch.setChecked(true);
-        	    break;
-    	    }
+    	    mCurrentFragment.toggleLightControl(on);
     	}
     }
     
@@ -143,16 +128,7 @@ public class SearchLight extends FragmentActivity implements PreviewSurface.Call
     	if (on) {
 	        on = false;
     	    mSurface.lightOff();
-    	    // Update UI
-    	    switch (mCurrentMode) {
-    	    case R.id.mode_lightbulb:
-    	    case R.id.mode_viewfinder:
-    	        mDrawable.reverseTransition(300);
-        	    break;
-    	    case R.id.mode_lightswitch:
-            	mLightswitch.setChecked(false);
-        	    break;
-    	    }
+    	    mCurrentFragment.toggleLightControl(on);
     	}
     }
 
@@ -170,32 +146,24 @@ public class SearchLight extends FragmentActivity implements PreviewSurface.Call
 		if (paused) {
 			mSurface.initCamera();
 		}
+		mCameraReady = false;
 	}
 
 	@Override
 	protected void onStop() {
 		super.onStop();
-		// kill any ongoing transition so it's not still finishing when we resume
-		mDrawable.resetTransition();
-		findViewById(R.id.surface).invalidate();
 
 		// Save the current mode so it's not lost when process stops
 		SharedPreferences modePreferences = getPreferences(Context.MODE_PRIVATE);
 		SharedPreferences.Editor editor = modePreferences.edit();
 		editor.putInt(MODE_TYPE, mCurrentMode);
 		editor.commit();
+		finish(); // I give up, the camera surface doesn't come back on resume, so just kill it all
 	}
 	
 	@Override
 	public void onWindowFocusChanged(boolean hasFocus) {
 		super.onWindowFocusChanged(hasFocus);
-
-        int mode = getIntent().getIntExtra(MODE_TYPE, R.id.mode_lightbulb);
-        if (hasFocus && !skipAnimate && mode == R.id.mode_blackout) {
-        	Button image = (Button) findViewById(R.id.toggleButton);
-        	Animation fadeOut = AnimationUtils.loadAnimation(this, R.anim.fade_out);
-        	image.startAnimation(fadeOut);
-        }
     	skipAnimate = false;
         
 		if (hasFocus && paused) {
@@ -232,17 +200,29 @@ public class SearchLight extends FragmentActivity implements PreviewSurface.Call
 
 	/** Implement the ModeDialogFragment's callback interface method */
 	@Override
-	public void onModeClick(int which) {
-		if (mCurrentMode == which) return;
+	public void onModeClick(int mode) {
+		if (mCurrentMode == mode) return;
 
+		mCurrentMode = mode;
 		skipAnimate = true;
-	    if (which != -1) {
-	        Intent intent = new Intent(this, SearchLight.class);
-	        intent.putExtra(MODE_TYPE, which);
-	        mSurface.releaseCamera();
-	        startActivity(intent);
-	        finish();
+	    if (mode != -1) {
+	    	switchControlFragment(mode);
 	    }
+	}
+	
+	private void switchControlFragment(int mode) {
+    	// update activity state w/ new mode
+        Intent intent = getIntent();
+        intent.putExtra(MODE_TYPE, mode);
+        setIntent(intent);
+        
+        // switch fragments
+        LightControlFragment newFragment = LightControlFragment.newInstance(mode, on);
+        mFragmentManager.beginTransaction().replace(R.id.controller_fragment, newFragment).commit();
+        mCurrentFragment = newFragment;
+        if (mode == R.id.mode_viewfinder) {
+        	mSurface.setIsViewfinder();
+        }
 	}
 	
 	/** Call this to show the dialog with different light modes */
@@ -253,11 +233,26 @@ public class SearchLight extends FragmentActivity implements PreviewSurface.Call
 	}
 
 	public void cameraReady() {
-		turnOn();
+		if (!mCameraReady) {
+			mCameraReady = true;
+			turnOn();
+		}
 	}
 	
 	public void cameraNotAvailable() {
 		showDialog(R.id.dialog_camera_na);
+	}
+	
+	
+	public static class HackPreviewSurfaceFragment extends Fragment {
+		public void HackPreviewSurfaceFragment() {}
+
+	    @Override
+	    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+	        Bundle savedInstanceState) {
+	        
+	    	return inflater.inflate(R.layout.hack_previewsurface, container, false);
+	    }
 	}
 	
 }

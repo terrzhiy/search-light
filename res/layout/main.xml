@@ -24,23 +24,17 @@ limitations under the License.
     	android:layout_height="1dp" />
     <!--  The following is a view to simply cover the preview surface  -->
     <View
+        android:id="@+id/surface_cover"
     	android:layout_width="1dp"
     	android:layout_height="1dp"
     	android:background="#000" />
-	<ImageButton 
-		android:id="@+id/button"
-		android:layout_centerVertical="true"
-		android:layout_centerHorizontal="true"
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"
-	    android:background="@color/transparent"
-	    android:src="@drawable/lightbulb"
-	    android:focusableInTouchMode="true"
-	    android:onClick="toggleLight"
-	    android:contentDescription="@string/description_button_lightbulb">
-	    <requestFocus/> <!-- get focus so the trackball works -->
-	</ImageButton>
-	<ImageButton 
+    
+    <FrameLayout
+        android:id="@+id/controller_fragment"
+	    android:layout_width="match_parent"
+	    android:layout_height="match_parent" />
+
+	<ImageButton
 		android:id="@+id/button_settings"
 	    android:layout_width="wrap_content"
 	    android:layout_height="wrap_content"

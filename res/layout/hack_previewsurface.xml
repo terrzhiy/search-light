@@ -14,15 +14,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<com.scottmain.android.searchlight.LightSwitch
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:myapp="http://schemas.android.com/apk/res-auto"
-	android:id="@+id/button_lightswitch"
-	android:layout_gravity="center"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:focusableInTouchMode="true"
-    android:focusable="true"
-    android:clickable="true"
-    android:contentDescription="@string/description_button_lightbulb" />
-
+    android:keepScreenOn="true" >
+    <com.scottmain.android.searchlight.PreviewSurface 
+    	android:id="@+id/surface"
+    	android:layout_width="1dp"
+    	android:layout_height="1dp" />
+    <!--  The following is a view to simply cover the preview surface  -->
+    <View
+    	android:layout_width="1dp"
+    	android:layout_height="1dp"
+    	android:background="#000" />
+</RelativeLayout>
